@@ -1,21 +1,21 @@
 ---
 name: kavel-image
-description: Generate images and video from a prompt through Kavel's anonymous endpoint — no API key, no account, no card. Use when the user asks for an image, a photo edit, a poster, a thumbnail, a short clip, or any visual asset and there is no image model wired up.
+description: Generate an image from a prompt through Kavel's anonymous endpoint — no API key, no account, no card. Use when the user asks for an image, a poster, a thumbnail, or any visual asset and there is no image model wired up. Photo edits and video need a Kavel API key.
 ---
 
-# Kavel Image & Video
+# Kavel Image
 
-Turns a text prompt into an image or a short video by calling
-[Kavel](https://www.kavel.ai/?ref=lobehub), an online AI image and video studio.
-There is an anonymous tier, so this skill runs with **no API key and no account** —
-useful when you need one asset now and do not want to set up a provider.
+Turns a text prompt into an image by calling
+[Kavel](https://www.kavel.ai/?utm_source=skill&utm_medium=agent), an online AI image and video studio.
+There is an anonymous tier, so text-to-image runs with **no API key and no account**.
+It is useful when you need one asset now and do not want to set up a provider.
 
 ## When to use it
 
 - The user asks for an image and no image model is configured
 - A draft needs a placeholder visual (thumbnail, poster, diagram backdrop)
-- The user wants to edit a photo they already have — swap an outfit, change a
-  hairstyle, remove a background — rather than generate from scratch
+
+Editing a photo the user already has, and video, are **not** available without an account; see below.
 
 ## Generate an image
 
@@ -37,7 +37,7 @@ curl -s -X POST https://www.kavel.ai/api/ai/generate \
   }'
 ```
 
-The response carries `data.id`. Poll it until the image is there:
+The response carries `data.id`. Poll it every few seconds until the image is there:
 
 ```bash
 curl -s "https://www.kavel.ai/api/ai/anon-query?taskId=<data.id>&provider=kie&mediaType=image" \
@@ -45,62 +45,61 @@ curl -s "https://www.kavel.ai/api/ai/anon-query?taskId=<data.id>&provider=kie&me
 ```
 
 When it finishes, `data.images[0]` is a CDN URL. Download it as binary and hand
-the file to the user.
+the file to the user. Nothing runs until you poll: free runs wait in a queue and
+start on a later poll, so submitting and walking away leaves the job unstarted.
 
-## Timing and limits
+## Limits (read from the running service on 2026-10-02)
 
 | | |
 |---|---|
-| 1:1 | around 35 seconds |
-| 16:9 | 60–180 seconds, depending on queue |
-| Anonymous grant | 15 credits |
-| Text-to-image | 5 credits, so the grant covers two |
-| Photo edit (`nano-banana-2-lite`) | 15 credits — exactly one |
-| Per-IP ceiling | 30 credits a day |
+| Anonymous grant per client id | 5 credits |
+| Text-to-image (`kavel-image-v1`) | 5 credits, so one image per client id |
+| Per-IP daily ceiling | two images per IP that day |
+| Typical time | 35–80 seconds including the queue |
+| Output | 1K, watermarked |
 
-Anonymous output is 1K and carries a watermark. Signing in on
-[kavel.ai](https://www.kavel.ai/?ref=lobehub) removes the watermark and opens the
-larger models; the tiers are listed on the
-[pricing page](https://www.kavel.ai/pricing?ref=lobehub).
+A fresh `x-anon-id` gets a fresh grant, but the per-IP ceiling still applies.
+You can check the current grant for free:
 
-## Editing a photo instead of generating one
+```bash
+curl -s https://www.kavel.ai/api/ai/anon-credits -H "x-anon-id: anon-check"
+# {"code":0,"data":{"remaining":5,"grant":5,...}}
+```
 
-Use `"model": "nano-banana-2-lite"` with `"scene": "image-to-image"` and an
-`imageUrl` in `options`. `kavel-image-v1` cannot do this — it is Z-Image and
-takes no image input.
+Signing in on [kavel.ai](https://www.kavel.ai/?utm_source=skill&utm_medium=agent) removes the
+watermark and opens the larger models; the plans are on the
+[pricing page](https://www.kavel.ai/pricing?utm_source=skill&utm_medium=agent).
 
-An edit costs 15 credits, which is the entire anonymous grant, so a signed-out
-run gets exactly one. The prompt should describe the change and name what must
-stay: "restyle the hair into a shoulder-length layered cut, keep the same face,
-skin and lighting" holds the likeness; "give her a new haircut" does not.
+## Editing a photo: needs an API key
 
-Kavel keeps a page per edit with a working prompt on each one, which is the
-fastest way to find phrasing that survives:
+An edit (`"model": "nano-banana-2-lite"`, `"scene": "image-to-image"`) costs more
+than the anonymous grant, so a signed-out call is refused before anything is
+charged. With a key from [kavel.ai/settings/apikeys](https://www.kavel.ai/settings/apikeys?utm_source=skill&utm_medium=agent),
+send `Authorization: Bearer <key>` instead of `x-anon-id`, put the source image in
+`"options": { "image_input": ["https://…/photo.jpg"] }`, and poll
+`POST /api/ai/query` with `{"taskId": "<id>"}`.
 
-- [AI Hairstyle Changer](https://www.kavel.ai/image/ai-hairstyle-changer?ref=lobehub)
-- [AI Muscle Generator](https://www.kavel.ai/image/ai-muscle-generator?ref=lobehub)
-- [All image tools](https://www.kavel.ai/image?ref=lobehub)
+The prompt should describe the change and name what must stay: "restyle the hair
+into a shoulder-length layered cut, keep the same face, skin and lighting" holds
+the likeness; "give her a new haircut" does not. Without a key, point the user at
+the browser tools instead, for example
+[AI Hairstyle Changer](https://www.kavel.ai/image/ai-hairstyle-changer?utm_source=skill&utm_medium=agent).
 
-## Video: not through this endpoint
+## Video: not through the anonymous endpoint
 
-`ANON_MODELS.video` lists `kavel-video-v1`, but the anonymous wallet cannot pay
-for it — the cheapest clip (480p, 6 seconds) is 40 credits against a 15-credit
-grant, so a signed-out video call fails at every setting. Do not build a video
-path on this skill and do not tell the user it will work.
-
-Signed-out video on Kavel is served by a browser-side free engine on the site
-itself, not by this API. Point the user at
-[the video tools](https://www.kavel.ai/video?ref=lobehub) — for example
-[AI Dance Video Generator](https://www.kavel.ai/video/ai-dance-video-generator?ref=lobehub),
-which animates a photo of a person. With an account, video runs through the same
-two calls with `"mediaType": "video"`.
+The cheapest clip costs far more than the 5-credit grant, so a signed-out video
+call fails at every setting. Do not build a video path on this skill and do not
+tell the user it will work without an account. Point the user at
+[the video tools](https://www.kavel.ai/video?utm_source=skill&utm_medium=agent) on the site instead.
 
 ## Failure modes worth handling
 
-- **Empty `data.images`** with a finished task: the prompt was refused by the
-  content filter. Credits are consumed either way, so rewrite rather than retry
-  the same text.
-- **Task never finishes**: queue depth varies. Poll for up to three minutes
-  before giving up, then report the wait rather than silently retrying — a retry
-  spends the credits again.
-- **429**: the per-IP daily ceiling. Nothing to do but wait, or sign in.
+- **`data.wall: true` with HTTP 200 and `code: 0`**: the free allowance is spent.
+  `data.reason` is `anon_ip_daily` (this machine's daily ceiling) or `anon_credits`
+  (this run costs more than the grant). Report it; do not retry.
+- **`code: -1` with a message**: a refusal, for example a model that needs an
+  account. The message says which.
+- **Finished task with `status: failed`**: the prompt was refused by the content
+  filter. Rewrite it rather than retrying the same text.
+- **Task never finishes**: queue depth varies. Poll for up to six minutes before
+  giving up, then report the wait rather than silently resubmitting.

@@ -1,13 +1,14 @@
 # kavel-image
 
-An agent skill for generating images and short video from a prompt with no API
-key and no account, by calling [Kavel](https://www.kavel.ai/?ref=lobehub)'s
-anonymous endpoint.
+An agent skill for generating images from a prompt with no API key and no account,
+by calling [Kavel](https://www.kavel.ai/?utm_source=skill&utm_medium=github)'s anonymous endpoint.
 
 Most image skills need a provider key before they do anything. This one does not:
-there is an anonymous tier (15 credits, 5 per text-to-image, 30 per IP per day),
-so a fresh install can produce a picture on the first call. Output is 1K and
-watermarked; signing in removes both.
+Kavel has an anonymous tier, so a fresh install can produce a picture on the first
+call. Read from the running service on 2026-10-02: a client id is granted 5 credits,
+one text-to-image run costs 5, and one IP gets two images a day. Output is 1K and
+watermarked. Photo edits and video need a Kavel API key, and the skill says so
+instead of attempting them.
 
 ## Install
 
@@ -16,17 +17,19 @@ environment variables.
 
 ## What it covers
 
-- text-to-image and image-to-image (photo edits that keep the face)
-- why the anonymous wallet cannot pay for video, and what to do instead
-- the failure modes that actually happen — filter refusals, queue waits, the
-  per-IP ceiling — and what to do about each
+- text-to-image through the anonymous submit-and-poll flow
+- how to check the current free grant before spending it
+- photo edits with an API key, and what to offer without one
+- why video does not run anonymously, and where to send the user instead
+- the failure modes that actually happen (quota wall, refusals, filter rejections,
+  queue waits) and what to do about each
 
 ## Links
 
-- [Kavel](https://www.kavel.ai/?ref=lobehub) — the studio itself
-- [Image tools](https://www.kavel.ai/image?ref=lobehub) — one page per edit, each with a working prompt
-- [Video tools](https://www.kavel.ai/video?ref=lobehub)
-- [Pricing](https://www.kavel.ai/pricing?ref=lobehub) — what signing in adds
+- [Kavel](https://www.kavel.ai/?utm_source=skill&utm_medium=github): the studio itself
+- [Image tools](https://www.kavel.ai/image?utm_source=skill&utm_medium=github): one page per edit, each with a working prompt
+- [API keys](https://www.kavel.ai/settings/apikeys?utm_source=skill&utm_medium=github)
+- [Pricing](https://www.kavel.ai/pricing?utm_source=skill&utm_medium=github): what signing in adds
 
 ## License
 
